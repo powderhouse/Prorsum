@@ -34,21 +34,21 @@ extension Data {
         var byte = byte
         self.append(&byte, count: 1)
     }
-    
+
     public mutating func append(_ bytes: [UInt8]) {
         self.append(bytes, count: bytes.count)
     }
-    
+
     init<T: BinaryInteger>(number: T) {
         let totalBytes = MemoryLayout<T>.size
-        
+
         let valuePointer = UnsafeMutablePointer<T>.allocate(capacity: 1)
         valuePointer.pointee = number
         defer {
             valuePointer.deinitialize()
             valuePointer.deallocate(capacity: 1)
         }
-        
+
         var bytes = [UInt8](repeating: 0, count: totalBytes)
         self = valuePointer.withMemoryRebound(to: UInt8.self, capacity: totalBytes) { p in
             for i in 0..<totalBytes {
@@ -57,10 +57,10 @@ extension Data {
             return Data(UnsafeBufferPointer(start: bytes, count: totalBytes))
         }
     }
-    
+
     func toInt(_ size: Int, offset: Int = 0) -> UInt64 {
         guard size > 0 && size <= 8 && count >= offset+size else { return 0 }
-        let slice = self[offset..<offset+size]
+        let slice = self.subdata(in: offset..<offset+size)
         var result: UInt64 = 0
         for (idx, byte) in slice.enumerated() {
             let (r, _) = size.subtractingReportingOverflow(idx)
@@ -69,21 +69,21 @@ extension Data {
         }
         return result
     }
-    
+
     init(randomBytes byteCount: Int) throws {
         var bytes = [UInt8](repeating: 0, count: byteCount)
-        
+
         #if os(Linux)
             let urandom = open("/dev/urandom", O_RDONLY)
-            
+
             if urandom == -1 {
                 try ensureLastOperationSucceeded()
             }
-            
+
             if read(urandom, &bytes, bytes.count) == -1 {
                 try ensureLastOperationSucceeded()
             }
-            
+
             if close(urandom) == -1 {
                 try ensureLastOperationSucceeded()
             }
@@ -92,7 +92,7 @@ extension Data {
                 try ensureLastOperationSucceeded()
             }
         #endif
-        
+
         self.init(bytes)
     }
 }
